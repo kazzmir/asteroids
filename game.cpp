@@ -5,9 +5,11 @@
 #include "util/input/input-source.h"
 #include "util/input/input-manager.h"
 #include "util/input/keyboard.h"
+#include "util/file-system.h"
 #include "util/events.h"
 #include <math.h>
 #include <vector>
+#include <algorithm>
 
 using std::vector;
 
@@ -73,6 +75,21 @@ public:
         sprite = Util::ReferenceCount<Graphics::Bitmap>(new Graphics::Bitmap(30, 30));
         sprite->clearToMask();
         sprite->circleFill(sprite->getWidth() / 2, sprite->getHeight() / 2, sprite->getWidth() / 2, Graphics::makeColor(200, 0, 0));
+
+        asteroidLarge = loadSprites(Filesystem::RelativePath("asteroids/large"));
+        asteroidMedium = loadSprites(Filesystem::RelativePath("asteroids/medium"));
+        asteroidSmall = loadSprites(Filesystem::RelativePath("asteroids/small"));
+    }
+
+    vector<Util::ReferenceCount<Graphics::Bitmap> > loadSprites(const Filesystem::RelativePath & path){
+        vector<Util::ReferenceCount<Graphics::Bitmap> > sprites;
+        vector<Filesystem::AbsolutePath> largeSprites = Storage::instance().getFiles(Storage::instance().find(path), "*.png");
+        std::sort(largeSprites.begin(), largeSprites.end());
+        for (vector<Filesystem::AbsolutePath>::iterator it = largeSprites.begin(); it != largeSprites.end(); it++){
+            const Filesystem::AbsolutePath & path = *it;
+            sprites.push_back(Util::ReferenceCount<Graphics::Bitmap>(new Graphics::Bitmap(path.path())));
+        }
+        return sprites;
     }
     
     Util::ReferenceCount<Graphics::Bitmap> getPlayer() const {
@@ -80,10 +97,24 @@ public:
     }
 
     Util::ReferenceCount<Graphics::Bitmap> getAsteroidSprite(AsteroidSize size, int tick) const {
-        return sprite;
+        int animationRate = 5;
+        switch (size){
+            case Large: {
+                return asteroidLarge[(tick / animationRate) % asteroidLarge.size()];
+            }
+            case Medium: {
+                return asteroidMedium[(tick / animationRate) % asteroidMedium.size()];
+            }
+            case Small: {
+                return asteroidSmall[(tick / animationRate) % asteroidSmall.size()];
+            }
+        }
     }
 
 protected:
+    vector<Util::ReferenceCount<Graphics::Bitmap> > asteroidLarge;
+    vector<Util::ReferenceCount<Graphics::Bitmap> > asteroidMedium;
+    vector<Util::ReferenceCount<Graphics::Bitmap> > asteroidSmall;
     Util::ReferenceCount<Graphics::Bitmap> sprite;
 };
 
@@ -96,8 +127,7 @@ public:
     angle(angle),
     speed(speed),
     size(size),
-    ticker(0),
-    radius(15){
+    ticker(0){
         switch (size){
             case Large: life = 10; break;
             case Medium: life = 5; break;
@@ -116,9 +146,13 @@ public:
     }
 
     void createMore(World & world);
+
+    int getRadius(const SpriteManager & manager){
+        return manager.getAsteroidSprite(size, ticker)->getWidth() / 2;
+    }
     
-    bool touches(double x, double y, int radius){
-        return Util::distance(this->x, this->y, x, y) < radius + this->radius;
+    bool touches(double x, double y, int radius, const SpriteManager & manager){
+        return Util::distance(this->x, this->y, x, y) < radius + getRadius(manager);
     }
 
     void logic(){
@@ -145,7 +179,6 @@ protected:
     double speed;
     AsteroidSize size;
     int ticker;
-    int radius;
     int life;
 };
 
@@ -442,7 +475,7 @@ public:
     Util::ReferenceCount<Asteroid> findAsteroid(double x, double y, int radius){
         for (vector<Util::ReferenceCount<Asteroid> >::iterator it = asteroids.begin(); it != asteroids.end(); it++){
             Util::ReferenceCount<Asteroid> asteroid = *it;
-            if (asteroid->touches(x, y, radius)){
+            if (asteroid->touches(x, y, radius, manager)){
                 return asteroid;
             }
         }
@@ -534,71 +567,71 @@ void Asteroid::createMore(World & world){
 }
 
 void Player::createBullet(World & world){
-    world.addBullet(x, y, angle, speed + 1);
+    world.addBullet(x, y, angle, speed + 2);
 }
 
-void run(){
-    Global::debug(0) << "Asteroids!" << std::endl;
-
-    class Game: public Util::Logic, public Util::Draw {
-    public:
-        Game():
+class Game: public Util::Logic, public Util::Draw {
+public:
+    Game():
         quit(false){
             input.set(Keyboard::Key_ESC, Quit);
         }
 
-        World world;
-        InputMap<GameInput> input;
-        InputSource source;
-        
-        void run(){
-            world.logic();
-            handleInput();
-        }
+    World world;
+    InputMap<GameInput> input;
+    InputSource source;
 
-        void handleInput(){
-            class Handler: public InputHandler<GameInput> {
-            public:
-                Handler(Game & game):
+    void run(){
+        world.logic();
+        handleInput();
+    }
+
+    void handleInput(){
+        class Handler: public InputHandler<GameInput> {
+        public:
+            Handler(Game & game):
                 game(game){
                 }
 
-                Game & game;
+            Game & game;
 
-                void release(const GameInput & input, Keyboard::unicode_t unicode){
-                }
+            void release(const GameInput & input, Keyboard::unicode_t unicode){
+            }
 
-                void press(const GameInput & input, Keyboard::unicode_t unicode){
-                    switch (input){
-                        case Quit: {
-                            game.quit = true;
-                            break;
-                        }
+            void press(const GameInput & input, Keyboard::unicode_t unicode){
+                switch (input){
+                    case Quit: {
+                        game.quit = true;
+                        break;
                     }
                 }
-            };
+            }
+        };
 
-            Handler handler(*this);
-            InputManager::handleEvents(input, source, handler);
-        }
+        Handler handler(*this);
+        InputManager::handleEvents(input, source, handler);
+    }
 
-        double ticks(double system){
-            return system;
-        }
+    double ticks(double system){
+        return system;
+    }
 
-        bool done(){
-            return quit;
-        }
+    bool done(){
+        return quit;
+    }
 
-        void draw(const Graphics::Bitmap & work){
-            work.clear();
-            world.draw(work);
-            work.BlitToScreen();
-        }
+    void draw(const Graphics::Bitmap & work){
+        work.clear();
+        world.draw(work);
+        work.BlitToScreen();
+    }
 
-    protected:
-        bool quit;
-    };
+protected:
+    bool quit;
+};
+
+void run(){
+    Global::debug(0) << "Asteroids!" << std::endl;
 
     Keyboard::pushRepeatState(false);
     Game game;
