@@ -63,6 +63,11 @@ public:
     vector<Star> stars;
 };
 
+enum ExplodeSize{
+    ExplosionLarge,
+    ExplosionSmall
+};
+
 enum AsteroidSize{
     Small,
     Medium,
@@ -75,6 +80,9 @@ public:
         asteroidLarge = loadSprites(Filesystem::RelativePath("asteroids/large"));
         asteroidMedium = loadSprites(Filesystem::RelativePath("asteroids/medium"));
         asteroidSmall = loadSprites(Filesystem::RelativePath("asteroids/small"));
+
+        explodeSmall = loadSprites(Filesystem::RelativePath("asteroids/small-explode"));
+        explode = loadSprites(Filesystem::RelativePath("asteroids/explode"));
 
         ship1 = Util::ReferenceCount<Graphics::Bitmap>(new Graphics::Bitmap(Storage::instance().find(Filesystem::RelativePath("asteroids/ships/ship1.png")).path()));
     }
@@ -92,6 +100,28 @@ public:
     
     Util::ReferenceCount<Graphics::Bitmap> getPlayer() const {
         return ship1;
+    }
+
+    Util::ReferenceCount<Graphics::Bitmap> getExplode(ExplodeSize size, int tick) const {
+        int animationRate = 3;
+        switch (size){
+            case ExplosionLarge: {
+                int use = tick / animationRate;
+                if (use >= explode.size()){
+                    return Util::ReferenceCount<Graphics::Bitmap>(NULL);
+                }
+                return explode[use];
+                break;
+            }
+            case ExplosionSmall: {
+                int use = tick / animationRate;
+                if (use >= explodeSmall.size()){
+                    return Util::ReferenceCount<Graphics::Bitmap>(NULL);
+                }
+                return explodeSmall[use];
+                break;
+            }
+        }
     }
 
     Util::ReferenceCount<Graphics::Bitmap> getAsteroidSprite(AsteroidSize size, int tick) const {
@@ -113,6 +143,10 @@ protected:
     vector<Util::ReferenceCount<Graphics::Bitmap> > asteroidLarge;
     vector<Util::ReferenceCount<Graphics::Bitmap> > asteroidMedium;
     vector<Util::ReferenceCount<Graphics::Bitmap> > asteroidSmall;
+
+    vector<Util::ReferenceCount<Graphics::Bitmap> > explodeSmall;
+    vector<Util::ReferenceCount<Graphics::Bitmap> > explode;
+
     Util::ReferenceCount<Graphics::Bitmap> ship1;
 };
 
@@ -135,6 +169,14 @@ public:
 
     void draw(const SpriteManager & manager, const Graphics::Bitmap & work){
         manager.getAsteroidSprite(size, ticker)->drawCenter((int) x, (int) y, work);
+    }
+
+    double getX() const {
+        return x;
+    }
+
+    double getY() const {
+        return y;
     }
 
     /* took a shot, lose some life. return true if dead. */
@@ -178,6 +220,32 @@ protected:
     AsteroidSize size;
     int ticker;
     int life;
+};
+
+class Explosion{
+public:
+    Explosion(double x, double y, ExplodeSize size):
+    x(x), y(y), size(size), ticker(0){
+    }
+
+    void logic(){
+        ticker += 1;
+    }
+
+    bool isDead(const SpriteManager & manager){
+        return manager.getExplode(size, ticker) == NULL;
+    }
+
+    void draw(const SpriteManager & manager, const Graphics::Bitmap & work){
+        Util::ReferenceCount<Graphics::Bitmap> sprite = manager.getExplode(size, ticker);
+        if (sprite != NULL){
+            sprite->drawCenter((int) x, (int) y, work);
+        }
+    }
+
+    double x, y;
+    ExplodeSize size;
+    int ticker;
 };
 
 class Bullet{
@@ -485,6 +553,7 @@ public:
     vector<Util::ReferenceCount<Asteroid> > asteroids;
     Player player;
     vector<Util::ReferenceCount<Bullet> > bullets;
+    vector<Util::ReferenceCount<Explosion> > explosions;
 
     bool nearPlayer(int x, int y){
         return Util::distance(player.getX(), player.getY(), x, y) < 100;
@@ -492,6 +561,10 @@ public:
 
     void addAsteroid(const Util::ReferenceCount<Asteroid> & asteroid){
         asteroids.push_back(asteroid);
+    }
+
+    void addExplosion(double x, double y, ExplodeSize size){
+        explosions.push_back(Util::ReferenceCount<Explosion>(new Explosion(x, y, size)));
     }
 
     Util::ReferenceCount<Asteroid> makeAsteroid(AsteroidSize size){
@@ -517,6 +590,12 @@ public:
             Util::ReferenceCount<Bullet> bullet = *it;
             bullet->logic();
         }
+
+        for (vector<Util::ReferenceCount<Explosion> >::iterator it = explosions.begin(); it != explosions.end(); it++){
+            Util::ReferenceCount<Explosion> explosion = *it;
+            explosion->logic();
+        }
+
         player.logic(*this);
 
         enforceConstraints();
@@ -549,7 +628,9 @@ public:
             Util::ReferenceCount<Bullet> bullet = *it;
             Util::ReferenceCount<Asteroid> asteroid = findAsteroid(bullet->getX(), bullet->getY(), bullet->getRadius());
             if (asteroid != NULL){
+                addExplosion(bullet->getX(), bullet->getY(), ExplosionSmall);
                 if (asteroid->hit()){
+                    addExplosion(asteroid->getX(), asteroid->getY(), ExplosionLarge);
                     removeAsteroid(asteroid);
                     asteroid->createMore(*this);
                 }
@@ -566,6 +647,15 @@ public:
             Util::ReferenceCount<Bullet> bullet = *it;
             if (outside(bullet->getX(), bullet->getY())){
                 it = bullets.erase(it);
+            } else {
+                it++;
+            }
+        }
+        
+        for (vector<Util::ReferenceCount<Explosion> >::iterator it = explosions.begin(); it != explosions.end(); /**/){
+            Util::ReferenceCount<Explosion> explosion = *it;
+            if (explosion->isDead(manager)){
+                it = explosions.erase(it);
             } else {
                 it++;
             }
@@ -587,6 +677,12 @@ public:
             Util::ReferenceCount<Bullet> bullet = *it;
             bullet->draw(manager, work);
         }
+
+        for (vector<Util::ReferenceCount<Explosion> >::iterator it = explosions.begin(); it != explosions.end(); it++){
+            Util::ReferenceCount<Explosion> explosion = *it;
+            explosion->draw(manager, work);
+        }
+
         player.draw(manager, work);
     }
 
