@@ -72,13 +72,11 @@ enum AsteroidSize{
 class SpriteManager{
 public:
     SpriteManager(){
-        sprite = Util::ReferenceCount<Graphics::Bitmap>(new Graphics::Bitmap(30, 30));
-        sprite->clearToMask();
-        sprite->circleFill(sprite->getWidth() / 2, sprite->getHeight() / 2, sprite->getWidth() / 2, Graphics::makeColor(200, 0, 0));
-
         asteroidLarge = loadSprites(Filesystem::RelativePath("asteroids/large"));
         asteroidMedium = loadSprites(Filesystem::RelativePath("asteroids/medium"));
         asteroidSmall = loadSprites(Filesystem::RelativePath("asteroids/small"));
+
+        ship1 = Util::ReferenceCount<Graphics::Bitmap>(new Graphics::Bitmap(Storage::instance().find(Filesystem::RelativePath("asteroids/ships/ship1.png")).path()));
     }
 
     vector<Util::ReferenceCount<Graphics::Bitmap> > loadSprites(const Filesystem::RelativePath & path){
@@ -93,7 +91,7 @@ public:
     }
     
     Util::ReferenceCount<Graphics::Bitmap> getPlayer() const {
-        return sprite;
+        return ship1;
     }
 
     Util::ReferenceCount<Graphics::Bitmap> getAsteroidSprite(AsteroidSize size, int tick) const {
@@ -115,7 +113,7 @@ protected:
     vector<Util::ReferenceCount<Graphics::Bitmap> > asteroidLarge;
     vector<Util::ReferenceCount<Graphics::Bitmap> > asteroidMedium;
     vector<Util::ReferenceCount<Graphics::Bitmap> > asteroidSmall;
-    Util::ReferenceCount<Graphics::Bitmap> sprite;
+    Util::ReferenceCount<Graphics::Bitmap> ship1;
 };
 
 class World;
@@ -228,18 +226,22 @@ class Player{
 public:
     enum Keys{
         Thrust,
+        ReverseThrust,
         TurnLeft,
         TurnRight,
         Shoot
     };
 
     Player(int x, int y):
-    turnSpeed(3),
+    turnSpeed(4),
     x(x), y(y),
-    angle(0), speed(0),
+    angle(0),
+    velocityX(0), velocityY(0),
+    speed(0.2),
     addShot(false),
     shotCounter(0){
         input.set(Keyboard::Key_UP, Thrust);
+        input.set(Keyboard::Key_DOWN, ReverseThrust);
         input.set(Keyboard::Key_LEFT, TurnLeft);
         input.set(Keyboard::Key_RIGHT, TurnRight);
         input.set(Keyboard::Key_SPACE, Shoot);
@@ -248,12 +250,14 @@ public:
     struct Hold{
         Hold():
         thrust(false),
+        reverseThrust(false),
         left(false),
         right(false),
         shoot(false){
         }
 
         bool thrust;
+        bool reverseThrust;
         bool left;
         bool right;
         bool shoot;
@@ -287,6 +291,10 @@ public:
                         hold.thrust = false;
                         break;
                     }
+                    case ReverseThrust: {
+                        hold.reverseThrust = false;
+                        break;
+                    }
                     case TurnLeft: {
                         hold.left = false;
                         break;
@@ -306,6 +314,10 @@ public:
                 switch (input){
                     case Thrust: {
                         hold.thrust = true;
+                        break;
+                    }
+                    case ReverseThrust: {
+                        hold.reverseThrust = true;
                         break;
                     }
                     case TurnLeft: {
@@ -329,6 +341,10 @@ public:
 
         if (hold.thrust){
             increaseSpeed();
+        }
+
+        if (hold.reverseThrust){
+            decreaseSpeed();
         }
 
         if (hold.left){
@@ -358,11 +374,30 @@ public:
         shotCounter = 0;
     }
 
-    void increaseSpeed(){
-        speed += 0.2;
-        if (speed > 2){
-            speed = 2;
+    void thrust(double amount){
+        velocityX += cos(Util::radians(angle)) * amount;
+        velocityY += -sin(Util::radians(angle)) * amount;
+        if (velocityX > 2){
+            velocityX = 2;
         }
+        if (velocityX < -2){
+            velocityX = -2;
+        }
+        if (velocityY > 2){
+            velocityY = 2;
+        }
+        if (velocityY < -2){
+            velocityY = -2;
+        }
+
+    }
+
+    void increaseSpeed(){
+        thrust(speed);
+    }
+
+    void decreaseSpeed(){
+        thrust(-speed);
     }
 
     void turnLeft(){
@@ -375,12 +410,25 @@ public:
 
     void logic(World & world){
         doInput();
-        speed -= gravity;
-        if (speed < 0){
-            speed = 0;
+
+        if (velocityX > gravity){
+            velocityX -= gravity;
+        } else if (velocityX < -gravity){
+            velocityX += gravity;
+        } else {
+            velocityX = 0;
         }
-        x += cos(Util::radians(angle)) * speed;
-        y -= sin(Util::radians(angle)) * speed;
+
+        if (velocityY > gravity){
+            velocityY -= gravity;
+        } else if (velocityY < -gravity){
+            velocityY += gravity;
+        } else {
+            velocityY = 0;
+        }
+
+        x += velocityX;
+        y += velocityY;
 
         if (shotCounter > 0){
             shotCounter -= 1;
@@ -406,7 +454,8 @@ public:
     }
 
     void draw(const SpriteManager & manager, const Graphics::Bitmap & work){
-        manager.getPlayer()->drawCenter((int) x, (int) y, work);
+        Util::ReferenceCount<Graphics::Bitmap> sprite = manager.getPlayer();
+        sprite->drawPivot(sprite->getWidth() / 2, sprite->getHeight() / 2, (int) x, (int) y, -angle + 90, work);
     }
 
     void createBullet(World & world);
@@ -414,6 +463,8 @@ public:
 protected:
     double x, y;
     int angle;
+    double velocityX;
+    double velocityY;
     double speed;
 
     bool addShot;
@@ -567,7 +618,7 @@ void Asteroid::createMore(World & world){
 }
 
 void Player::createBullet(World & world){
-    world.addBullet(x, y, angle, speed + 2);
+    world.addBullet(x, y, angle, Util::distance(0, 0, velocityX, velocityY) + 3);
 }
 
 class Game: public Util::Logic, public Util::Draw {
