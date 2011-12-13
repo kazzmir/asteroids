@@ -50,10 +50,12 @@ public:
     }
 
     void draw(const Graphics::Bitmap & work) const {
+        work.lock();
         for (vector<Star>::const_iterator it = stars.begin(); it != stars.end(); it++){
             const Star & star = *it;
             star.draw(work);
         }
+        work.unlock();
     }
 
     Star makeStar(){
