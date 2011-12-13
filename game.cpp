@@ -305,6 +305,7 @@ public:
 
     Player(int x, int y):
     turnSpeed(4),
+    shootSound(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/laser.wav")).path()),
     x(x), y(y),
     angle(0),
     velocityX(0), velocityY(0),
@@ -338,6 +339,7 @@ public:
     InputMap<Keys> input;
     InputSource source;
     const int turnSpeed;
+    Sound shootSound;
 
     double getX(){
         return x;
@@ -435,6 +437,7 @@ public:
 
     void shoot(){
         if (shotCounter == 0){
+            shootSound.play();
             addShot = true;
             shotCounter = 10;
         }
