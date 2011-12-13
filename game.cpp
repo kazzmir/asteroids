@@ -523,7 +523,8 @@ public:
 
     void draw(const SpriteManager & manager, const Graphics::Bitmap & work){
         Util::ReferenceCount<Graphics::Bitmap> sprite = manager.getPlayer();
-        sprite->drawPivot(sprite->getWidth() / 2, sprite->getHeight() / 2, (int) x, (int) y, -angle + 90, work);
+        /* sprite is facing at 90 degrees so we rotate it by 90 to make it face 0 first */
+        sprite->drawPivot(sprite->getWidth() / 2, sprite->getHeight() / 2, (int) x, (int) y, angle - 90, work);
     }
 
     void createBullet(World & world);
