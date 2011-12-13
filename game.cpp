@@ -6,6 +6,7 @@
 #include "util/input/input-manager.h"
 #include "util/input/keyboard.h"
 #include "util/file-system.h"
+#include "util/music.h"
 #include "util/sound.h"
 #include "util/events.h"
 #include <math.h>
@@ -128,7 +129,7 @@ public:
     }
 
     Util::ReferenceCount<Graphics::Bitmap> getAsteroidSprite(AsteroidSize size, int tick) const {
-        int animationRate = 5;
+        int animationRate = 4;
         switch (size){
             case Large: {
                 return asteroidLarge[(tick / animationRate) % asteroidLarge.size()];
@@ -162,7 +163,7 @@ public:
     angle(angle),
     speed(speed),
     size(size),
-    ticker(0){
+    ticker(Util::rnd(100)){
         switch (size){
             case Large: life = 10; break;
             case Medium: life = 5; break;
@@ -183,8 +184,8 @@ public:
     }
 
     /* took a shot, lose some life. return true if dead. */
-    bool hit(){
-        life -= 1;
+    bool hit(int amount){
+        life -= amount;
         return life <= 0;
     }
 
@@ -306,6 +307,7 @@ public:
     Player(int x, int y):
     turnSpeed(4),
     shootSound(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/laser.wav")).path()),
+    alive(true),
     x(x), y(y),
     angle(0),
     velocityX(0), velocityY(0),
@@ -340,6 +342,7 @@ public:
     InputSource source;
     const int turnSpeed;
     Sound shootSound;
+    bool alive;
 
     double getX(){
         return x;
@@ -347,6 +350,14 @@ public:
 
     double getY(){
         return y;
+    }
+
+    void spawn(double x, double y){
+        this->x = x;
+        this->y = y;
+        hold = Hold();
+        velocityX = 0;
+        velocityY = 0;
     }
 
     void doInput(){
@@ -448,6 +459,12 @@ public:
         shotCounter = 0;
     }
 
+    int getRadius(const SpriteManager & manager){
+        Util::ReferenceCount<Graphics::Bitmap> sprite = manager.getPlayer();
+        /* average the width and height, then divide by 2 to get the radius */
+        return (sprite->getWidth() + sprite->getHeight()) / 4;
+    }
+
     void thrust(double amount){
         velocityX += cos(Util::radians(angle)) * amount;
         velocityY += -sin(Util::radians(angle)) * amount;
@@ -480,6 +497,14 @@ public:
 
     void turnRight(){
         angle -= turnSpeed;
+    }
+
+    bool isAlive(){
+        return alive;
+    }
+
+    void setAlive(bool what){
+        alive = what;
     }
 
     void logic(World & world){
@@ -552,8 +577,9 @@ public:
     player(GFX_X / 2, GFX_Y / 2),
     asteroidExplode(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/explode.wav")).path()),
     bulletHit(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/pop.wav")).path()),
-    playerDie(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/crash.wav")).path()){
-        for (int i = 0; i < 10; i++){
+    playerDie(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/crash.wav")).path()),
+    spawnPlayer(-1){
+        for (int i = 0; i < Util::rnd(7) + 5; i++){
             asteroids.push_back(makeAsteroid(Large));
         }
     }
@@ -568,9 +594,27 @@ public:
     Sound asteroidExplode;
     Sound bulletHit;
     Sound playerDie;
+    
+    /* -1 means do nothing
+     * 0 means try to spawn the player
+     * >0 means count down to 0
+     */
+    int spawnPlayer;
 
     bool nearPlayer(int x, int y){
         return Util::distance(player.getX(), player.getY(), x, y) < 100;
+    }
+
+    int closestAsteroid(int x, int y){
+        int closest = -1;
+        for (vector<Util::ReferenceCount<Asteroid> >::iterator it = asteroids.begin(); it != asteroids.end(); it++){
+            Util::ReferenceCount<Asteroid> asteroid = *it;
+            int distance = Util::distance(asteroid->getX(), asteroid->getY(), x, y);
+            if (closest == -1 || distance < closest){
+                closest = distance;
+            }
+        }
+        return closest;
     }
 
     void addAsteroid(const Util::ReferenceCount<Asteroid> & asteroid){
@@ -584,7 +628,7 @@ public:
     Util::ReferenceCount<Asteroid> makeAsteroid(AsteroidSize size){
         int x = Util::rnd(GFX_X);
         int y = Util::rnd(GFX_Y);
-        while (nearPlayer(x, y)){
+        while (player.isAlive() && nearPlayer(x, y)){
             x = Util::rnd(GFX_X);
             y = Util::rnd(GFX_Y);
         }
@@ -610,10 +654,30 @@ public:
             explosion->logic();
         }
 
-        player.logic(*this);
+        if (player.isAlive()){
+            player.logic(*this);
+        } else {
+            if (spawnPlayer > 0){
+                spawnPlayer -= 1;
+            } else if (spawnPlayer == 0){
+                int x = Util::rnd(GFX_X);
+                int y = Util::rnd(GFX_Y);
+                if (closestAsteroid(x, y) > 100){
+                    player.spawn(x, y);
+                    player.setAlive(true);
+                    spawnPlayer = -1;
+                }
+            }
+        }
 
         enforceConstraints();
         doCollisions();
+
+        if (asteroids.size() == 0){
+            for (int i = 0; i < Util::rnd(7) + 5; i++){
+                asteroids.push_back(makeAsteroid(Large));
+            }
+        }
     }
 
     Util::ReferenceCount<Asteroid> findAsteroid(double x, double y, int radius){
@@ -637,6 +701,15 @@ public:
         }
     }
 
+    void hitAsteroid(const Util::ReferenceCount<Asteroid> & asteroid, int amount){
+        if (asteroid->hit(amount)){
+            asteroidExplode.play();
+            addExplosion(asteroid->getX(), asteroid->getY(), ExplosionLarge);
+            removeAsteroid(asteroid);
+            asteroid->createMore(*this);
+        }
+    }
+
     void doCollisions(){
         for (vector<Util::ReferenceCount<Bullet> >::iterator it = bullets.begin(); it != bullets.end(); /**/ ){
             Util::ReferenceCount<Bullet> bullet = *it;
@@ -644,16 +717,21 @@ public:
             if (asteroid != NULL){
                 addExplosion(bullet->getX(), bullet->getY(), ExplosionSmall);
                 bulletHit.play();
-                if (asteroid->hit()){
-                    asteroidExplode.play();
-                    addExplosion(asteroid->getX(), asteroid->getY(), ExplosionLarge);
-                    removeAsteroid(asteroid);
-                    asteroid->createMore(*this);
-                }
-
+                hitAsteroid(asteroid, 1);
                 it = bullets.erase(it);
             } else {
                 it++;
+            }
+        }
+
+        if (player.isAlive()){
+            Util::ReferenceCount<Asteroid> asteroid = findAsteroid(player.getX(), player.getY(), player.getRadius(manager));
+            if (asteroid != NULL){
+                addExplosion(player.getX(), player.getY(), ExplosionLarge);
+                playerDie.play();
+                player.setAlive(false);
+                spawnPlayer = 60;
+                hitAsteroid(asteroid, 5);
             }
         }
     }
@@ -699,7 +777,9 @@ public:
             explosion->draw(manager, work);
         }
 
-        player.draw(manager, work);
+        if (player.isAlive()){
+            player.draw(manager, work);
+        }
     }
 
     void addBullet(double x, double y, int angle, double speed){
@@ -710,14 +790,14 @@ public:
 void Asteroid::createMore(World & world){
     switch (size){
         case Large: {
-            int many = Util::rnd(4) + 1;
+            int many = Util::rnd(3) + 1;
             for (int i = 0; i < many; i++){
                 world.addAsteroid(world.makeAsteroid(x, y, Medium));
             }
             break;
         }
         case Medium: {
-            int many = Util::rnd(4) + 1;
+            int many = Util::rnd(5) + 1;
             for (int i = 0; i < many; i++){
                 world.addAsteroid(world.makeAsteroid(x, y, Small));
             }
@@ -796,6 +876,7 @@ protected:
 void run(){
     Global::debug(0) << "Asteroids!" << std::endl;
 
+    Music::changeSong();
     Keyboard::pushRepeatState(false);
     Game game;
     Util::standardLoop(game, game);
