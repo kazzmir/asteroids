@@ -6,6 +6,7 @@
 #include "util/input/input-manager.h"
 #include "util/input/keyboard.h"
 #include "util/file-system.h"
+#include "util/sound.h"
 #include "util/events.h"
 #include <math.h>
 #include <vector>
@@ -545,7 +546,10 @@ protected:
 class World{
 public:
     World():
-    player(GFX_X / 2, GFX_Y / 2){
+    player(GFX_X / 2, GFX_Y / 2),
+    asteroidExplode(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/explode.wav")).path()),
+    bulletHit(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/pop.wav")).path()),
+    playerDie(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/crash.wav")).path()){
         for (int i = 0; i < 10; i++){
             asteroids.push_back(makeAsteroid(Large));
         }
@@ -557,6 +561,10 @@ public:
     Player player;
     vector<Util::ReferenceCount<Bullet> > bullets;
     vector<Util::ReferenceCount<Explosion> > explosions;
+
+    Sound asteroidExplode;
+    Sound bulletHit;
+    Sound playerDie;
 
     bool nearPlayer(int x, int y){
         return Util::distance(player.getX(), player.getY(), x, y) < 100;
@@ -632,7 +640,9 @@ public:
             Util::ReferenceCount<Asteroid> asteroid = findAsteroid(bullet->getX(), bullet->getY(), bullet->getRadius());
             if (asteroid != NULL){
                 addExplosion(bullet->getX(), bullet->getY(), ExplosionSmall);
+                bulletHit.play();
                 if (asteroid->hit()){
+                    asteroidExplode.play();
                     addExplosion(asteroid->getX(), asteroid->getY(), ExplosionLarge);
                     removeAsteroid(asteroid);
                     asteroid->createMore(*this);
