@@ -9,6 +9,7 @@
 #include "util/music.h"
 #include "util/sound.h"
 #include "util/events.h"
+#include "configuration.h"
 #include <math.h>
 #include <vector>
 #include <algorithm>
@@ -319,6 +320,15 @@ public:
         input.set(Keyboard::Key_LEFT, TurnLeft);
         input.set(Keyboard::Key_RIGHT, TurnRight);
         input.set(Keyboard::Key_SPACE, Shoot);
+
+        input.set(Configuration::config(0).getJoystickUp(), Thrust);
+        input.set(Configuration::config(0).getJoystickDown(), ReverseThrust);
+        input.set(Configuration::config(0).getJoystickLeft(), TurnLeft);
+        input.set(Configuration::config(0).getJoystickRight(), TurnRight);
+        input.set(Configuration::config(0).getJoystickAttack1(), Shoot);
+        input.set(Configuration::config(0).getJoystickAttack2(), Shoot);
+        input.set(Configuration::config(0).getJoystickAttack3(), Shoot);
+        input.set(Configuration::config(0).getJoystickAttack4(), Shoot);
     }
 
     struct Hold{
