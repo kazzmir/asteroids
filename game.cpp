@@ -1,6 +1,7 @@
 #include "game.h"
 #include "util/bitmap.h"
 #include "util/debug.h"
+#include "util/font.h"
 #include "util/input/input-map.h"
 #include "util/input/input-source.h"
 #include "util/input/input-manager.h"
@@ -9,6 +10,7 @@
 #include "util/music.h"
 #include "util/sound.h"
 #include "util/events.h"
+#include "globals.h"
 #include "configuration.h"
 #include <math.h>
 #include <vector>
@@ -309,6 +311,7 @@ public:
     turnSpeed(4),
     shootSound(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/laser.wav")).path()),
     alive(true),
+    score(0),
     x(x), y(y),
     angle(0),
     velocityX(0), velocityY(0),
@@ -353,6 +356,7 @@ public:
     const int turnSpeed;
     Sound shootSound;
     bool alive;
+    int score;
 
     double getX(){
         return x;
@@ -360,6 +364,18 @@ public:
 
     double getY(){
         return y;
+    }
+
+    int getScore() const {
+        return score;
+    }
+
+    void increaseScore(int amount){
+        score += amount;
+    }
+
+    void loseScore(int amount){
+        score -= amount;
     }
 
     void spawn(double x, double y){
@@ -713,6 +729,7 @@ public:
 
     void hitAsteroid(const Util::ReferenceCount<Asteroid> & asteroid, int amount){
         if (asteroid->hit(amount)){
+            player.increaseScore(50);
             asteroidExplode.play();
             addExplosion(asteroid->getX(), asteroid->getY(), ExplosionLarge);
             removeAsteroid(asteroid);
@@ -725,6 +742,7 @@ public:
             Util::ReferenceCount<Bullet> bullet = *it;
             Util::ReferenceCount<Asteroid> asteroid = findAsteroid(bullet->getX(), bullet->getY(), bullet->getRadius());
             if (asteroid != NULL){
+                player.increaseScore(10);
                 addExplosion(bullet->getX(), bullet->getY(), ExplosionSmall);
                 bulletHit.play();
                 hitAsteroid(asteroid, 1);
@@ -738,6 +756,7 @@ public:
             Util::ReferenceCount<Asteroid> asteroid = findAsteroid(player.getX(), player.getY(), player.getRadius(manager));
             if (asteroid != NULL){
                 addExplosion(player.getX(), player.getY(), ExplosionLarge);
+                player.loseScore(500);
                 playerDie.play();
                 player.setAlive(false);
                 spawnPlayer = 60;
@@ -790,6 +809,9 @@ public:
         if (player.isAlive()){
             player.draw(manager, work);
         }
+
+        const Font & font = Font::getFont(Global::DEFAULT_FONT, 20, 20);
+        font.printf(1, 1, Graphics::makeColor(255, 255, 255), work, "Score %d", 0, player.getScore());
     }
 
     void addBullet(double x, double y, int angle, double speed){
