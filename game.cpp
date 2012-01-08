@@ -113,7 +113,7 @@ public:
         int animationRate = 3;
         switch (size){
             case ExplosionLarge: {
-                int use = tick / animationRate;
+                unsigned int use = tick / animationRate;
                 if (use >= explode.size()){
                     return Util::ReferenceCount<Graphics::Bitmap>(NULL);
                 }
@@ -121,7 +121,7 @@ public:
                 break;
             }
             case ExplosionSmall: {
-                int use = tick / animationRate;
+                unsigned int use = tick / animationRate;
                 if (use >= explodeSmall.size()){
                     return Util::ReferenceCount<Graphics::Bitmap>(NULL);
                 }
@@ -129,6 +129,7 @@ public:
                 break;
             }
         }
+        return Util::ReferenceCount<Graphics::Bitmap>(NULL);
     }
 
     Util::ReferenceCount<Graphics::Bitmap> getAsteroidSprite(AsteroidSize size, int tick) const {
@@ -144,6 +145,7 @@ public:
                 return asteroidSmall[(tick / animationRate) % asteroidSmall.size()];
             }
         }
+        return asteroidMedium[(tick / animationRate) % asteroidMedium.size()];
     }
 
 protected:
