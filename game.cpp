@@ -1,5 +1,6 @@
 #include "game.h"
 #include "util/bitmap.h"
+#include "util/stretch-bitmap.h"
 #include "util/debug.h"
 #include "util/font.h"
 #include "util/input/input-map.h"
@@ -897,10 +898,13 @@ public:
         return quit;
     }
 
-    void draw(const Graphics::Bitmap & work){
+    void draw(const Graphics::Bitmap & buffer){
+        Graphics::StretchedBitmap work(GFX_X, GFX_Y, buffer);
+        work.start();
         work.clear();
         world.draw(work);
-        work.BlitToScreen();
+        work.finish();
+        buffer.BlitToScreen();
     }
 
 protected:
