@@ -11,6 +11,7 @@
 #include "util/music.h"
 #include "util/sound.h"
 #include "util/events.h"
+#include "util/init.h"
 #include "globals.h"
 #include "configuration.h"
 #include <math.h>
@@ -891,7 +892,7 @@ public:
     }
 
     double ticks(double system){
-        return system;
+        return system * Global::ticksPerSecond(40);
     }
 
     bool done(){
