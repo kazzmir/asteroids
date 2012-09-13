@@ -328,14 +328,14 @@ public:
         input.set(Keyboard::Key_RIGHT, TurnRight);
         input.set(Keyboard::Key_SPACE, Shoot);
 
-        input.set(Configuration::getJoystickUp(0), Thrust);
-        input.set(Configuration::getJoystickDown(0), ReverseThrust);
-        input.set(Configuration::getJoystickLeft(0), TurnLeft);
-        input.set(Configuration::getJoystickRight(0), TurnRight);
-        input.set(Configuration::getJoystickAttack1(0), Shoot);
-        input.set(Configuration::getJoystickAttack2(0), Shoot);
-        input.set(Configuration::getJoystickAttack3(0), Shoot);
-        input.set(Configuration::getJoystickAttack4(0), Shoot);
+        input.set(Joystick::Up, Thrust);
+        input.set(Joystick::Down, ReverseThrust);
+        input.set(Joystick::Left, TurnLeft);
+        input.set(Joystick::Right, TurnRight);
+        input.set(Joystick::Button1, Shoot);
+        input.set(Joystick::Button2, Shoot);
+        input.set(Joystick::Button3, Shoot);
+        input.set(Joystick::Button4, Shoot);
     }
 
     struct Hold{
