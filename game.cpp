@@ -1,6 +1,6 @@
 #include "game.h"
-#include "util/bitmap.h"
-#include "util/stretch-bitmap.h"
+#include "util/graphics/bitmap.h"
+#include "util/graphics/stretch-bitmap.h"
 #include "util/debug.h"
 #include "util/font.h"
 #include "util/input/input-map.h"
