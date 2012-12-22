@@ -813,7 +813,7 @@ public:
             player.draw(manager, work);
         }
 
-        const Font & font = Font::getFont(Global::DEFAULT_FONT, 20, 20);
+        const Font & font = Font::getDefaultFont(20, 20);
         font.printf(1, 1, Graphics::makeColor(255, 255, 255), work, "Score %d", 0, player.getScore());
     }
 
