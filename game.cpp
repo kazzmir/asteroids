@@ -12,7 +12,7 @@
 #include "util/events.h"
 #include "util/init.h"
 #include "globals.h"
-#include "configuration.h"
+#include "util/configuration.h"
 #include <math.h>
 #include <vector>
 #include <algorithm>
