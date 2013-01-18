@@ -904,7 +904,7 @@ public:
         work.clear();
         world.draw(work);
         work.finish();
-        buffer.BlitToScreen();
+        // buffer.BlitToScreen();
     }
 
 protected:
