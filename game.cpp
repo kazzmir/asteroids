@@ -311,6 +311,7 @@ public:
     };
 
     Player(int x, int y):
+    source(true),
     turnSpeed(4),
     shootSound(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/laser.wav")).path()),
     alive(true),
@@ -851,6 +852,7 @@ void Player::createBullet(World & world){
 class Game: public Util::Logic, public Util::Draw {
 public:
     Game():
+        source(true),
         quit(false){
             input.set(Keyboard::Key_ESC, Quit);
         }
