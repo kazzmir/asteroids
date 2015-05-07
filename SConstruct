@@ -9,6 +9,7 @@ env = Environment(ENV = os.environ, CPPPATH=includedirs, CPPDEFINES = ['USE_ALLE
 env.ParseConfig('pkg-config r-tech1 --libs --cflags')
 
 source = ['src/argument.cpp',
-        'src/game.cpp']
+        'src/game.cpp',
+        'src/main.cpp']
 
 env.Program('asteroids', [s.replace('src', 'build') for s in source])
