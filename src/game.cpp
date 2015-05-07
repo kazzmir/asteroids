@@ -1,18 +1,17 @@
 #include "game.h"
-#include "util/graphics/bitmap.h"
-#include "util/debug.h"
-#include "util/font.h"
-#include "util/input/input-map.h"
-#include "util/input/input-source.h"
-#include "util/input/input-manager.h"
-#include "util/input/keyboard.h"
-#include "util/file-system.h"
-#include "util/sound/music.h"
-#include "util/sound/sound.h"
-#include "util/events.h"
-#include "util/init.h"
-#include "globals.h"
-#include "util/configuration.h"
+#include "r-tech1/graphics/bitmap.h"
+#include "r-tech1/debug.h"
+#include "r-tech1/font.h"
+#include "r-tech1/input/input-map.h"
+#include "r-tech1/input/input-source.h"
+#include "r-tech1/input/input-manager.h"
+#include "r-tech1/input/keyboard.h"
+#include "r-tech1/file-system.h"
+#include "r-tech1/sound/music.h"
+#include "r-tech1/sound/sound.h"
+#include "r-tech1/events.h"
+#include "r-tech1/init.h"
+#include "r-tech1/configuration.h"
 #include <math.h>
 #include <vector>
 #include <algorithm>
@@ -923,4 +922,9 @@ void run(){
     Keyboard::popRepeatState();
 }
 
+}
+
+
+int main(int argc, char ** argv){
+    return 0;
 }
