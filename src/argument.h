@@ -5,7 +5,7 @@
 #include "r-tech1/pointer.h"
 
 namespace Asteroids{
-    std::vector< ::Util::ReferenceCount<Argument> > arguments();
+    Argument::ParameterRefs arguments();
 }
 
 #endif

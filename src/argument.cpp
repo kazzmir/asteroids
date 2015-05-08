@@ -8,7 +8,7 @@ using std::endl;
 
 namespace Asteroids{
 
-class AsteroidsArgument: public Argument {
+class AsteroidsArgument: public Argument::Parameter {
 public:
     vector<string> keywords() const {
         vector<string> out;
@@ -20,22 +20,22 @@ public:
         return " : Run asteroids";
     }
 
-    class Run: public ArgumentAction {
+    class Run: public Argument::Action {
     public:
         virtual void act(){
             run();
         }
     };
 
-    vector<string>::iterator parse(vector<string>::iterator current, vector<string>::iterator end, ActionRefs & actions){
-        actions.push_back(::Util::ReferenceCount<ArgumentAction>(new Run()));
+    vector<string>::iterator parse(vector<string>::iterator current, vector<string>::iterator end, Argument::ActionRefs & actions){
+        actions.push_back(::Util::ReferenceCount<Argument::Action>(new Run()));
         return current;
     }
 };
 
-std::vector< ::Util::ReferenceCount<Argument> > arguments(){
-    vector< ::Util::ReferenceCount<Argument> > all;
-    all.push_back(::Util::ReferenceCount<Argument>(new AsteroidsArgument()));
+Argument::ParameterRefs arguments(){
+    Argument::ParameterRefs all;
+    all.push_back(::Util::ReferenceCount<Argument::Parameter>(new AsteroidsArgument()));
     return all;
 }
 
