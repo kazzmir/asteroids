@@ -78,7 +78,7 @@ int main(int argc, char ** argv){
     Util::Parameter<Graphics::Bitmap*> use(Graphics::screenParameter, Graphics::getScreenBuffer());
     
     InputManager input;
-    //Music music(music_on);
+    Music music(music_on);
 
     Util::Parameter<Util::ReferenceCount<Graphics::ShaderManager> > defaultShaderManager(Graphics::shaderManager, Util::ReferenceCount<Graphics::ShaderManager>(new Graphics::ShaderManager()));
 

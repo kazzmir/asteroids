@@ -12,4 +12,6 @@ source = ['src/argument.cpp',
         'src/game.cpp',
         'src/main.cpp']
 
+env.Append(CXXFLAGS = ['-g3'])
+
 env.Program('asteroids', [s.replace('src', 'build') for s in source])

@@ -84,14 +84,14 @@ enum AsteroidSize{
 class SpriteManager{
 public:
     SpriteManager(){
-        asteroidLarge = loadSprites(Filesystem::RelativePath("asteroids/large"));
-        asteroidMedium = loadSprites(Filesystem::RelativePath("asteroids/medium"));
-        asteroidSmall = loadSprites(Filesystem::RelativePath("asteroids/small"));
+        asteroidLarge = loadSprites(Filesystem::RelativePath("large"));
+        asteroidMedium = loadSprites(Filesystem::RelativePath("medium"));
+        asteroidSmall = loadSprites(Filesystem::RelativePath("small"));
 
-        explodeSmall = loadSprites(Filesystem::RelativePath("asteroids/small-explode"));
-        explode = loadSprites(Filesystem::RelativePath("asteroids/explode"));
+        explodeSmall = loadSprites(Filesystem::RelativePath("small-explode"));
+        explode = loadSprites(Filesystem::RelativePath("explode"));
 
-        ship1 = Util::ReferenceCount<Graphics::Bitmap>(new Graphics::Bitmap(Storage::instance().find(Filesystem::RelativePath("asteroids/ships/ship1.png")).path()));
+        ship1 = Util::ReferenceCount<Graphics::Bitmap>(new Graphics::Bitmap(Storage::instance().find(Filesystem::RelativePath("ships/ship1.png")).path()));
     }
 
     vector<Util::ReferenceCount<Graphics::Bitmap> > loadSprites(const Filesystem::RelativePath & path){
@@ -312,7 +312,7 @@ public:
     Player(int x, int y):
     source(true),
     turnSpeed(4),
-    shootSound(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/laser.wav")).path()),
+    shootSound(Storage::instance().find(Filesystem::RelativePath("sounds/laser.wav")).path()),
     alive(true),
     score(0),
     x(x), y(y),
@@ -604,9 +604,9 @@ class World{
 public:
     World():
     player(GFX_X / 2, GFX_Y / 2),
-    asteroidExplode(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/explode.wav")).path()),
-    bulletHit(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/pop.wav")).path()),
-    playerDie(Storage::instance().find(Filesystem::RelativePath("asteroids/sounds/crash.wav")).path()),
+    asteroidExplode(Storage::instance().find(Filesystem::RelativePath("sounds/explode.wav")).path()),
+    bulletHit(Storage::instance().find(Filesystem::RelativePath("sounds/pop.wav")).path()),
+    playerDie(Storage::instance().find(Filesystem::RelativePath("sounds/crash.wav")).path()),
     spawnPlayer(-1){
         for (int i = 0; i < Util::rnd(7) + 5; i++){
             asteroids.push_back(makeAsteroid(Large));
