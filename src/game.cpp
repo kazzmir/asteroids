@@ -21,8 +21,8 @@ using std::vector;
 namespace Asteroids{
 
 /* hacks */
-const int GFX_X = 640;
-const int GFX_Y = 480;
+const int GFX_X = 1024;
+const int GFX_Y = 768;
 
 enum GameInput{
     Quit
