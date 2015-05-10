@@ -183,6 +183,10 @@ public:
         manager.getAsteroidSprite(size, ticker)->drawCenter((int) x, (int) y, work);
     }
 
+    AsteroidSize getSize() const {
+        return size;
+    }
+
     double getX() const {
         return x;
     }
@@ -371,13 +375,11 @@ public:
         score -= amount;
     }
 
-    void spawn(double x, double y){
-        this->x = x;
-        this->y = y;
-        hold = Hold();
-        velocityX = 0;
-        velocityY = 0;
+    void setShootingBehavior(const Util::ReferenceCount<ShootingBehavior> & behavior){
+        this->shootBehavior = behavior;
     }
+
+    void spawn(double x, double y);
 
     void doInput();
 
@@ -553,6 +555,15 @@ Player::Player(int x, int y):
         input.set(Joystick::Button4, Shoot);
 }
 
+void Player::spawn(double x, double y){
+    this->x = x;
+    this->y = y;
+    hold = Hold();
+    shootBehavior = new ShootingBehavior();
+    velocityX = 0;
+    velocityY = 0;
+}
+
 void Player::logic(World & world){
     doInput();
 
@@ -681,6 +692,39 @@ void Player::doInput(){
     }
 }
 
+class Powerup{
+public:
+    Powerup(double x, double y, int angle, double speed):
+    x(x),
+    y(y),
+    angle(angle),
+    speed(speed),
+    die(false),
+    life(350){
+    }
+
+    double x;
+    double y;
+    int angle;
+    double speed;
+    bool die;
+    int life;
+
+    bool isDead(){
+        return die;
+    }
+
+    void logic(World & world);
+
+    void power(Player & player){
+        player.setShootingBehavior(Util::ReferenceCount<ShootingBehavior>(new TripleShot()));
+    }
+
+    void draw(const Graphics::Bitmap & work){
+        work.circle((int) x, (int) y, 10, Graphics::makeColor(0, 255, 0));
+    }
+};
+
 class World{
 public:
     World():
@@ -691,6 +735,7 @@ public:
     spawnPlayer(-1){
         for (int i = 0; i < Util::rnd(7) + 5; i++){
             asteroids.push_back(makeAsteroid(Large));
+            // asteroids.push_back(makeAsteroid(Small));
         }
     }
 
@@ -700,6 +745,7 @@ public:
     Player player;
     vector<Util::ReferenceCount<Bullet> > bullets;
     vector<Util::ReferenceCount<Explosion> > explosions;
+    vector<Util::ReferenceCount<Powerup> > powerups;
 
     Sound asteroidExplode;
     Sound bulletHit;
@@ -713,6 +759,14 @@ public:
 
     bool nearPlayer(int x, int y){
         return Util::distance(player.getX(), player.getY(), x, y) < 100;
+    }
+
+    const Player & getPlayer() const {
+        return player;
+    }
+
+    Player & getPlayer(){
+        return player;
     }
 
     int closestAsteroid(int x, int y){
@@ -745,6 +799,10 @@ public:
         return makeAsteroid(x, y, size);
     }
 
+    void makePowerup(int x, int y){
+        powerups.push_back(Util::ReferenceCount<Powerup>(new Powerup(x, y, Util::rnd(360), ((double) Util::rnd(3) + 1) / 3.0)));
+    }
+
     Util::ReferenceCount<Asteroid> makeAsteroid(double x, double y, AsteroidSize size){
         return Util::ReferenceCount<Asteroid>(new Asteroid(x, y, Util::rnd(360), Util::rnd(10) / 7.0 + 0.5, size));
     }
@@ -762,6 +820,11 @@ public:
         for (vector<Util::ReferenceCount<Explosion> >::iterator it = explosions.begin(); it != explosions.end(); it++){
             Util::ReferenceCount<Explosion> explosion = *it;
             explosion->logic();
+        }
+
+        for (vector<Util::ReferenceCount<Powerup> >::iterator it = powerups.begin(); it != powerups.end(); it++){
+            Util::ReferenceCount<Powerup> powerup = *it;
+            powerup->logic(*this);
         }
 
         if (player.isAlive()){
@@ -818,7 +881,14 @@ public:
             addExplosion(asteroid->getX(), asteroid->getY(), ExplosionLarge);
             removeAsteroid(asteroid);
             asteroid->createMore(*this);
+            if (asteroid->getSize() == Small && Util::rnd(20) == 0){
+                makePowerup(asteroid->getX(), asteroid->getY());
+            }
         }
+    }
+
+    bool touchPlayer(double x, double y, int radius){
+        return Util::distance(x, y, player.getX(), player.getY()) < radius + player.getRadius(manager);
     }
 
     void doCollisions(){
@@ -858,6 +928,15 @@ public:
                 it++;
             }
         }
+
+        for (vector<Util::ReferenceCount<Powerup> >::iterator it = powerups.begin(); it != powerups.end(); /**/){
+            Util::ReferenceCount<Powerup> powerup = *it;
+            if (powerup->isDead()){
+                it = powerups.erase(it);
+            } else {
+                it++;
+            }
+        }
         
         for (vector<Util::ReferenceCount<Explosion> >::iterator it = explosions.begin(); it != explosions.end(); /**/){
             Util::ReferenceCount<Explosion> explosion = *it;
@@ -885,6 +964,11 @@ public:
             bullet->draw(manager, work);
         }
 
+        for (vector<Util::ReferenceCount<Powerup> >::iterator it = powerups.begin(); it != powerups.end(); it++){
+            Util::ReferenceCount<Powerup> powerup = *it;
+            powerup->draw(work);
+        }
+
         for (vector<Util::ReferenceCount<Explosion> >::iterator it = explosions.begin(); it != explosions.end(); it++){
             Util::ReferenceCount<Explosion> explosion = *it;
             explosion->draw(manager, work);
@@ -902,6 +986,35 @@ public:
         bullets.push_back(Util::ReferenceCount<Bullet>(new Bullet(x, y, angle, speed)));
     }
 };
+
+void Powerup::logic(World & world){
+    if (life > 0){
+        life -= 1;
+    } else {
+        die = true;
+    }
+
+    x += cos(angle) * speed;
+    y += -sin(angle) * speed;
+
+    if (x < 0){
+        x = GFX_X;
+    }
+    if (x > GFX_X){
+        x = 0;
+    }
+    if (y < 0){
+        y = GFX_Y;
+    }
+    if (y > GFX_Y){
+        y = 0;
+    }
+
+    if (world.touchPlayer(x, y, 10)){
+        die = true;
+        power(world.getPlayer());
+    }
+}
 
 void ShootingBehavior::createBullet(Player & player, World & world){
     world.addBullet(player.getX(), player.getY(), player.getAngle(), Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
