@@ -301,6 +301,8 @@ protected:
     int radius;
 };
 
+class ShootingBehavior;
+
 static const double gravity = 0.02;
 class Player{
 public:
@@ -312,34 +314,7 @@ public:
         Shoot
     };
 
-    Player(int x, int y):
-    source(true),
-    turnSpeed(4),
-    shootSound(Storage::instance().find(Filesystem::RelativePath("sounds/laser.wav")).path()),
-    alive(true),
-    score(0),
-    x(x), y(y),
-    angle(0),
-    velocityX(0), velocityY(0),
-    speed(0.2),
-    addShot(false),
-    shotCounter(0),
-    accelerate(0){
-        input.set(Keyboard::Key_UP, Thrust);
-        input.set(Keyboard::Key_DOWN, ReverseThrust);
-        input.set(Keyboard::Key_LEFT, TurnLeft);
-        input.set(Keyboard::Key_RIGHT, TurnRight);
-        input.set(Keyboard::Key_SPACE, Shoot);
-
-        input.set(Joystick::Up, Thrust);
-        input.set(Joystick::Down, ReverseThrust);
-        input.set(Joystick::Left, TurnLeft);
-        input.set(Joystick::Right, TurnRight);
-        input.set(Joystick::Button1, Shoot);
-        input.set(Joystick::Button2, Shoot);
-        input.set(Joystick::Button3, Shoot);
-        input.set(Joystick::Button4, Shoot);
-    }
+    Player(int x, int y);
 
     struct Hold{
         Hold():
@@ -361,7 +336,6 @@ public:
     InputMap<Keys> input;
     InputSource source;
     const int turnSpeed;
-    Sound shootSound;
     bool alive;
     int score;
 
@@ -375,6 +349,18 @@ public:
 
     int getScore() const {
         return score;
+    }
+
+    int getAngle() const {
+        return angle;
+    }
+
+    double getVelocityX() const {
+        return velocityX;
+    }
+
+    double getVelocityY() const {
+        return velocityY;
     }
 
     void increaseScore(int amount){
@@ -393,104 +379,7 @@ public:
         velocityY = 0;
     }
 
-    void doInput(){
-        class Handler: public InputHandler<Keys> {
-        public:
-            Handler(Hold & hold):
-            hold(hold){
-            }
-
-            Hold & hold;
-
-            void release(const Keys & input, Keyboard::unicode_t unicode){
-                switch (input){
-                    case Thrust: {
-                        hold.thrust = false;
-                        break;
-                    }
-                    case ReverseThrust: {
-                        hold.reverseThrust = false;
-                        break;
-                    }
-                    case TurnLeft: {
-                        hold.left = false;
-                        break;
-                    }
-                    case TurnRight: {
-                        hold.right = false;
-                        break;
-                    }
-                    case Shoot: {
-                        hold.shoot = false;
-                        break;
-                    }
-                }
-            }
-
-            void press(const Keys & input, Keyboard::unicode_t unicode){
-                switch (input){
-                    case Thrust: {
-                        hold.thrust = true;
-                        break;
-                    }
-                    case ReverseThrust: {
-                        hold.reverseThrust = true;
-                        break;
-                    }
-                    case TurnLeft: {
-                        hold.left = true;
-                        break;
-                    }
-                    case TurnRight: {
-                        hold.right = true;
-                        break;
-                    }
-                    case Shoot: {
-                        hold.shoot = true;
-                        break;
-                    }
-                }
-            }
-        };
-
-        Handler handler(hold);
-        InputManager::handleEvents(input, source, handler);
-
-        if (hold.thrust){
-            increaseSpeed();
-        }
-
-        if (hold.reverseThrust){
-            decreaseSpeed();
-        }
-
-        if (hold.left){
-            turnLeft();
-        }
-
-        if (hold.right){
-            turnRight();
-        }
-        
-        if (hold.shoot){
-            shoot();
-        } else {
-            resetShoot();
-        }
-    }
-
-    void shoot(){
-        if (shotCounter == 0){
-            shootSound.play();
-            addShot = true;
-            shotCounter = 10;
-        }
-    }
-
-    void resetShoot(){
-        addShot = false;
-        shotCounter = 0;
-    }
+    void doInput();
 
     int getRadius(const SpriteManager & manager){
         Util::ReferenceCount<Graphics::Bitmap> sprite = manager.getPlayer();
@@ -544,54 +433,7 @@ public:
         alive = what;
     }
 
-    void logic(World & world){
-        doInput();
-
-        if (velocityX > gravity){
-            velocityX -= gravity;
-        } else if (velocityX < -gravity){
-            velocityX += gravity;
-        } else {
-            velocityX = 0;
-        }
-
-        if (velocityY > gravity){
-            velocityY -= gravity;
-        } else if (velocityY < -gravity){
-            velocityY += gravity;
-        } else {
-            velocityY = 0;
-        }
-
-        x += velocityX;
-        y += velocityY;
-
-        if (shotCounter > 0){
-            shotCounter -= 1;
-        }
-
-        if (addShot){
-            addShot = false;
-            createBullet(world);
-        }
-
-        if (x < 0){
-            x = GFX_X;
-        }
-        if (x > GFX_X){
-            x = 0;
-        }
-        if (y < 0){
-            y = GFX_Y;
-        }
-        if (y > GFX_Y){
-            y = 0;
-        }
-
-        if (accelerate > 0){
-            accelerate -= 1;
-        }
-    }
+    void logic(World & world);
 
     void draw(const SpriteManager & manager, const Graphics::Bitmap & work){
         Util::ReferenceCount<Graphics::Bitmap> sprite = manager.getPlayer();
@@ -626,8 +468,6 @@ public:
         sprite->drawPivot(sprite->getWidth() / 2, sprite->getHeight() / 2, (int) x, (int) y, angle - 90, work);
     }
 
-    void createBullet(World & world);
-
 protected:
     double x, y;
     int angle;
@@ -635,10 +475,211 @@ protected:
     double velocityY;
     double speed;
 
+    int accelerate;
+
+    Util::ReferenceCount<ShootingBehavior> shootBehavior;
+};
+
+class ShootingBehavior{
+public:
+    ShootingBehavior():
+        shootSound(Storage::instance().find(Filesystem::RelativePath("sounds/laser.wav")).path()),
+        addShot(false),
+        shotCounter(0){
+    }
+
+private:
+    Sound shootSound;
     bool addShot;
     int shotCounter;
-    int accelerate;
+
+public:
+    virtual void shoot(){
+        if (shotCounter == 0){
+            shootSound.play();
+            addShot = true;
+            shotCounter = 10;
+        }
+    }
+
+    virtual void resetShoot(){
+        addShot = false;
+        shotCounter = 0;
+    }
+
+    virtual void createBullet(Player & player, World & world);
+
+    virtual void logic(Player & player, World & world){
+        if (shotCounter > 0){
+            shotCounter -= 1;
+        }
+
+        if (addShot){
+            addShot = false;
+            createBullet(player, world);
+        }
+    }
 };
+
+class TripleShot: public ShootingBehavior {
+public:
+    virtual void createBullet(Player & player, World & world);
+};
+
+Player::Player(int x, int y):
+    source(true),
+    turnSpeed(4),
+    alive(true),
+    score(0),
+    x(x), y(y),
+    angle(0),
+    velocityX(0), velocityY(0),
+    speed(0.2),
+    accelerate(0),
+    shootBehavior(new ShootingBehavior()){
+        input.set(Keyboard::Key_UP, Thrust);
+        input.set(Keyboard::Key_DOWN, ReverseThrust);
+        input.set(Keyboard::Key_LEFT, TurnLeft);
+        input.set(Keyboard::Key_RIGHT, TurnRight);
+        input.set(Keyboard::Key_SPACE, Shoot);
+
+        input.set(Joystick::Up, Thrust);
+        input.set(Joystick::Down, ReverseThrust);
+        input.set(Joystick::Left, TurnLeft);
+        input.set(Joystick::Right, TurnRight);
+        input.set(Joystick::Button1, Shoot);
+        input.set(Joystick::Button2, Shoot);
+        input.set(Joystick::Button3, Shoot);
+        input.set(Joystick::Button4, Shoot);
+}
+
+void Player::logic(World & world){
+    doInput();
+
+    if (velocityX > gravity){
+        velocityX -= gravity;
+    } else if (velocityX < -gravity){
+        velocityX += gravity;
+    } else {
+        velocityX = 0;
+    }
+
+    if (velocityY > gravity){
+        velocityY -= gravity;
+    } else if (velocityY < -gravity){
+        velocityY += gravity;
+    } else {
+        velocityY = 0;
+    }
+
+    x += velocityX;
+    y += velocityY;
+
+    shootBehavior->logic(*this, world);
+
+    if (x < 0){
+        x = GFX_X;
+    }
+    if (x > GFX_X){
+        x = 0;
+    }
+    if (y < 0){
+        y = GFX_Y;
+    }
+    if (y > GFX_Y){
+        y = 0;
+    }
+
+    if (accelerate > 0){
+        accelerate -= 1;
+    }
+}
+
+void Player::doInput(){
+    class Handler: public InputHandler<Keys> {
+    public:
+        Handler(Hold & hold):
+            hold(hold){
+            }
+
+        Hold & hold;
+
+        void release(const Keys & input, Keyboard::unicode_t unicode){
+            switch (input){
+                case Thrust: {
+                    hold.thrust = false;
+                    break;
+                }
+                case ReverseThrust: {
+                    hold.reverseThrust = false;
+                    break;
+                }
+                case TurnLeft: {
+                    hold.left = false;
+                    break;
+                }
+                case TurnRight: {
+                    hold.right = false;
+                    break;
+                }
+                case Shoot: {
+                    hold.shoot = false;
+                    break;
+                }
+            }
+        }
+
+        void press(const Keys & input, Keyboard::unicode_t unicode){
+            switch (input){
+                case Thrust: {
+                    hold.thrust = true;
+                    break;
+                }
+                case ReverseThrust: {
+                    hold.reverseThrust = true;
+                    break;
+                }
+                case TurnLeft: {
+                    hold.left = true;
+                    break;
+                }
+                case TurnRight: {
+                    hold.right = true;
+                    break;
+                }
+                case Shoot: {
+                    hold.shoot = true;
+                    break;
+                }
+            }
+        }
+    };
+
+    Handler handler(hold);
+    InputManager::handleEvents(input, source, handler);
+
+    if (hold.thrust){
+        increaseSpeed();
+    }
+
+    if (hold.reverseThrust){
+        decreaseSpeed();
+    }
+
+    if (hold.left){
+        turnLeft();
+    }
+
+    if (hold.right){
+        turnRight();
+    }
+
+    if (hold.shoot){
+        shootBehavior->shoot();
+    } else {
+        shootBehavior->resetShoot();
+    }
+}
 
 class World{
 public:
@@ -862,6 +903,16 @@ public:
     }
 };
 
+void ShootingBehavior::createBullet(Player & player, World & world){
+    world.addBullet(player.getX(), player.getY(), player.getAngle(), Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+}
+
+void TripleShot::createBullet(Player & player, World & world){
+    world.addBullet(player.getX(), player.getY(), player.getAngle(), Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+    world.addBullet(player.getX(), player.getY(), player.getAngle() + 10, Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+    world.addBullet(player.getX(), player.getY(), player.getAngle() - 10, Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+}
+
 void Asteroid::createMore(World & world){
     switch (size){
         case Large: {
@@ -882,10 +933,6 @@ void Asteroid::createMore(World & world){
             break;
         }
     }
-}
-
-void Player::createBullet(World & world){
-    world.addBullet(x, y, angle, Util::distance(0, 0, velocityX, velocityY) + 3);
 }
 
 class Game: public Util::Logic, public Util::Draw {
