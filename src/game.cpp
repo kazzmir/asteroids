@@ -700,7 +700,9 @@ public:
     angle(angle),
     speed(speed),
     die(false),
-    life(350){
+    life(350),
+    ball(0),
+    ballAngle(0){
     }
 
     double x;
@@ -709,6 +711,9 @@ public:
     double speed;
     bool die;
     int life;
+
+    int ball;
+    int ballAngle;
 
     bool isDead(){
         return die;
@@ -721,7 +726,33 @@ public:
     }
 
     void draw(const Graphics::Bitmap & work){
-        work.circle((int) x, (int) y, 10, Graphics::makeColor(0, 255, 0));
+        ball += 4;
+        if (ball > 360){
+            ball = ball - 360;
+        }
+
+        ballAngle += 2;
+        if (ballAngle > 360){
+            ballAngle = ballAngle - 360;
+        }
+
+        double distance = sin(Util::radians(ball)) * 7;
+        int size = 4;
+
+        int x1 = (int) (x + cos(Util::radians(ballAngle)) * distance);
+        int y1 = (int) (y + -sin(Util::radians(ballAngle)) * distance);
+
+        work.circleFill(x1, y1, size, Graphics::makeColor(0, 255, 0));
+
+        x1 = (int) (x + cos(Util::radians(ballAngle + 120)) * distance);
+        y1 = (int) (y + -sin(Util::radians(ballAngle + 120)) * distance);
+
+        work.circleFill(x1, y1, size, Graphics::makeColor(255, 0, 0));
+
+        x1 = (int) (x + cos(Util::radians(ballAngle - 120)) * distance);
+        y1 = (int) (y + -sin(Util::radians(ballAngle - 120)) * distance);
+
+        work.circleFill(x1, y1, size, Graphics::makeColor(64, 64, 255));
     }
 };
 
@@ -737,6 +768,8 @@ public:
             asteroids.push_back(makeAsteroid(Large));
             // asteroids.push_back(makeAsteroid(Small));
         }
+
+        // makePowerup(100, 100);
     }
 
     StarField stars;
