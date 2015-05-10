@@ -62,15 +62,6 @@ public:
     }
 
     void draw(const Graphics::Bitmap & work) const {
-        /*
-        // work.lock();
-        for (vector<Star>::const_iterator it = stars.begin(); it != stars.end(); it++){
-            const Star & star = *it;
-            star.draw(work);
-        }
-        // work.unlock();
-        */
-
         background.draw(0, 0, work);
     }
 
@@ -332,7 +323,8 @@ public:
     velocityX(0), velocityY(0),
     speed(0.2),
     addShot(false),
-    shotCounter(0){
+    shotCounter(0),
+    accelerate(0){
         input.set(Keyboard::Key_UP, Thrust);
         input.set(Keyboard::Key_DOWN, ReverseThrust);
         input.set(Keyboard::Key_LEFT, TurnLeft);
@@ -526,10 +518,14 @@ public:
 
     void increaseSpeed(){
         thrust(speed);
+        if (accelerate < 10){
+            accelerate += 2;
+        }
     }
 
     void decreaseSpeed(){
         thrust(-speed);
+        accelerate = 0;
     }
 
     void turnLeft(){
@@ -591,10 +587,41 @@ public:
         if (y > GFX_Y){
             y = 0;
         }
+
+        if (accelerate > 0){
+            accelerate -= 1;
+        }
     }
 
     void draw(const SpriteManager & manager, const Graphics::Bitmap & work){
         Util::ReferenceCount<Graphics::Bitmap> sprite = manager.getPlayer();
+
+        if (accelerate > 0){
+
+            /* Draw two traingles that represent thrust. The first is yellow, meaning somewhat low energy. The second
+             * is drawn on top of the first triangle and is red, which represents high energy.
+             */
+
+            /* This could probably be simplified using some matrix rotation/translations */
+            int x1 = (int) (x + cos(Util::radians(angle + 180)) * (30 + accelerate));
+            int y1 = (int) (y + -sin(Util::radians(angle + 180)) * (30 + accelerate));
+            int x2 = (int) (x + cos(Util::radians(angle + 180)) * 5 + cos(Util::radians(angle - 90)) * 9);
+            int y2 = (int) (y + -sin(Util::radians(angle + 180)) * 5 + -sin(Util::radians(angle - 90)) * 9);
+            int x3 = (int) (x + cos(Util::radians(angle + 180)) * 5 + cos(Util::radians(angle + 90)) * 9);
+            int y3 = (int) (y + -sin(Util::radians(angle + 180)) * 5 + -sin(Util::radians(angle + 90)) * 9);
+
+            work.triangle(x1, y1, x2, y2, x3, y3, Graphics::makeColor(255, 255, 0));
+
+            x1 = (int) (x + cos(Util::radians(angle + 180)) * (30 + accelerate / 2));
+            y1 = (int) (y + -sin(Util::radians(angle + 180)) * (30 + accelerate / 2));
+            x2 = (int) (x + cos(Util::radians(angle + 180)) * 5 + cos(Util::radians(angle - 90)) * 7);
+            y2 = (int) (y + -sin(Util::radians(angle + 180)) * 5 + -sin(Util::radians(angle - 90)) * 7);
+            x3 = (int) (x + cos(Util::radians(angle + 180)) * 5 + cos(Util::radians(angle + 90)) * 7);
+            y3 = (int) (y + -sin(Util::radians(angle + 180)) * 5 + -sin(Util::radians(angle + 90)) * 7);
+
+            work.triangle(x1, y1, x2, y2, x3, y3, Graphics::makeColor(255, 128, 0));
+        }
+
         /* sprite is facing at 90 degrees so we rotate it by 90 to make it face 0 first */
         sprite->drawPivot(sprite->getWidth() / 2, sprite->getHeight() / 2, (int) x, (int) y, angle - 90, work);
     }
@@ -610,6 +637,7 @@ protected:
 
     bool addShot;
     int shotCounter;
+    int accelerate;
 };
 
 class World{
