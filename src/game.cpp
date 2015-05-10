@@ -48,19 +48,30 @@ public:
 
 class StarField{
 public:
-    StarField(){
+    StarField():
+    background(GFX_X, GFX_Y){
+        background.clear();
         for (int i = 0; i < 1000; i++){
-            stars.push_back(makeStar());
+            int x = Util::rnd(GFX_X);
+            int y = Util::rnd(GFX_Y);
+            double brightness = Util::rnd(100) / 100.0;
+            int c = 255 * brightness;
+            background.putPixel(x, y, Graphics::makeColor(c, c, c));
+            // stars.push_back(makeStar());
         }
     }
 
     void draw(const Graphics::Bitmap & work) const {
+        /*
         // work.lock();
         for (vector<Star>::const_iterator it = stars.begin(); it != stars.end(); it++){
             const Star & star = *it;
             star.draw(work);
         }
         // work.unlock();
+        */
+
+        background.draw(0, 0, work);
     }
 
     Star makeStar(){
@@ -68,6 +79,7 @@ public:
     }
 
     vector<Star> stars;
+    Graphics::Bitmap background;
 };
 
 enum ExplodeSize{
