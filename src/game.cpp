@@ -33,44 +33,76 @@ public:
     Star(int x, int y, double brightness):
     x(x),
     y(y),
-    brightness(brightness){
+    brightness(brightness),
+    brightModifier(0),
+    velocity(0){
+        //Global::debug(0) << "Brightness: " << 255 * brightness << std::endl;
+        const int c = 255 * brightness;
+        if (c < 60){
+            velocity = 1;
+        } else if (c >= 60 && c < 180){
+            velocity = 2;
+        } else {
+            velocity = 3;
+        }
+    }
+    
+    void logic(bool reverse) {
+        brightModifier = Util::rnd(20) / 100.0;
+        if (reverse){
+            const int v = x + -velocity;
+            x = (v < 0 ? GFX_X + v : v);
+        } else {
+            x = fmod(x + velocity, GFX_X);
+        }
     }
 
     void draw(const Graphics::Bitmap & work) const {
-        int c = 255 * brightness;
+        int c = 255 * (brightness + brightModifier);
         work.putPixel(x, y, Graphics::makeColor(c, c, c));
     }
 
     int x;
     int y;
     double brightness;
+    double brightModifier;
+    double velocity;
 };
 
 class StarField{
 public:
     StarField():
-    background(GFX_X, GFX_Y){
+    background(GFX_X, GFX_Y),
+    direction(Util::rnd(50) < 25){
         background.clear();
         for (int i = 0; i < 1000; i++){
-            int x = Util::rnd(GFX_X);
-            int y = Util::rnd(GFX_Y);
-            double brightness = Util::rnd(100) / 100.0;
-            int c = 255 * brightness;
-            background.putPixel(x, y, Graphics::makeColor(c, c, c));
-            // stars.push_back(makeStar());
+            stars.push_back(makeStar());
+        }
+    }
+    
+    void logic() {
+        for (std::vector<Util::ReferenceCount<Star> >::const_iterator i = stars.begin(); i != stars.end(); ++i){
+            Util::ReferenceCount<Star> star = *i;
+            star->logic(direction);
         }
     }
 
     void draw(const Graphics::Bitmap & work) const {
+        background.clear();
+        for (std::vector<Util::ReferenceCount<Star> >::const_iterator i = stars.begin(); i != stars.end(); ++i){
+            Util::ReferenceCount<Star> star = *i;
+            star->draw(background);
+        }
         background.draw(0, 0, work);
     }
 
-    Star makeStar(){
-        return Star(Util::rnd(GFX_X), Util::rnd(GFX_Y), Util::rnd(100) / 100.0);
+    Util::ReferenceCount<Star> makeStar(){
+        return Util::ReferenceCount<Star>(new Star(Util::rnd(GFX_X), Util::rnd(GFX_Y), Util::rnd(80) / 100.0));
     }
 
-    vector<Star> stars;
+    vector<Util::ReferenceCount<Star> > stars;
     Graphics::Bitmap background;
+    bool direction;
 };
 
 enum ExplodeSize{
@@ -841,6 +873,7 @@ public:
     }
 
     void logic(){
+        stars.logic();
         for (vector<Util::ReferenceCount<Asteroid> >::iterator it = asteroids.begin(); it != asteroids.end(); it++){
             Util::ReferenceCount<Asteroid> asteroid = *it;
             asteroid->logic();
