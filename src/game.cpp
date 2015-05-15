@@ -39,18 +39,18 @@ public:
         //Global::debug(0) << "Brightness: " << 255 * brightness << std::endl;
         const int c = 255 * brightness;
         if (c < 60){
-            velocity = 1;
+            velocity = .2;
         } else if (c >= 60 && c < 180){
-            velocity = 2;
+            velocity = .8;
         } else {
-            velocity = 3;
+            velocity = 1.5;
         }
     }
     
     void logic(bool reverse) {
         brightModifier = Util::rnd(20) / 100.0;
         if (reverse){
-            const int v = x + -velocity;
+            const double v = x + -velocity;
             x = (v < 0 ? GFX_X + v : v);
         } else {
             x = fmod(x + velocity, GFX_X);
@@ -62,8 +62,8 @@ public:
         work.putPixel(x, y, Graphics::makeColor(c, c, c));
     }
 
-    int x;
-    int y;
+    double x;
+    double y;
     double brightness;
     double brightModifier;
     double velocity;
