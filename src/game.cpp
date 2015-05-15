@@ -47,14 +47,41 @@ public:
         }
     }
     
-    void logic(bool reverse) {
-        brightModifier = Util::rnd(20) / 100.0;
+    void move(int angle){
+        x -= cos(Util::radians(angle)) * velocity;
+        y += sin(Util::radians(angle)) * velocity;
+        if (x < 0){
+            x = GFX_X + x;
+        } else if (x > GFX_X){
+            x = x - GFX_X;
+        }
+        if (y < 0){
+            y = GFX_Y + y;
+        } else if (y > GFX_Y){
+            y = y - GFX_Y;
+        }
+    }
+    
+    void moveVertical(bool reverse){
+        if (reverse){
+            const double v = y + -velocity;
+            y = (v < 0 ? GFX_Y + v : v);
+        } else {
+            y = fmod(y + velocity, GFX_Y);
+        }
+    }
+    
+    void moveHorizontal(bool reverse){
         if (reverse){
             const double v = x + -velocity;
             x = (v < 0 ? GFX_X + v : v);
         } else {
             x = fmod(x + velocity, GFX_X);
         }
+    }
+    
+    void logic() {
+        brightModifier = Util::rnd(20) / 100.0;
     }
 
     void draw(const Graphics::Bitmap & work) const {
@@ -80,10 +107,11 @@ public:
         }
     }
     
-    void logic() {
+    void logic(int angle) {
         for (std::vector<Util::ReferenceCount<Star> >::const_iterator i = stars.begin(); i != stars.end(); ++i){
             Util::ReferenceCount<Star> star = *i;
-            star->logic(direction);
+            star->logic();
+            star->move(angle);
         }
     }
 
@@ -873,7 +901,7 @@ public:
     }
 
     void logic(){
-        stars.logic();
+        stars.logic(player.getAngle());
         for (vector<Util::ReferenceCount<Asteroid> >::iterator it = asteroids.begin(); it != asteroids.end(); it++){
             Util::ReferenceCount<Asteroid> asteroid = *it;
             asteroid->logic();
