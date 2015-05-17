@@ -435,6 +435,10 @@ public:
         score -= amount;
     }
 
+    const Util::ReferenceCount<ShootingBehavior> & getShootingBehavior() const {
+        return shootBehavior;
+    }
+
     void setShootingBehavior(const Util::ReferenceCount<ShootingBehavior> & behavior){
         this->shootBehavior = behavior;
     }
@@ -547,26 +551,39 @@ public:
     ShootingBehavior():
         shootSound(Storage::instance().find(Filesystem::RelativePath("sounds/laser.wav")).path()),
         addShot(false),
-        shotCounter(0){
+        shotCounter(0),
+        strength(0){
     }
 
 private:
     Sound shootSound;
     bool addShot;
     int shotCounter;
+    int strength;
 
 public:
     virtual void shoot(){
         if (shotCounter == 0){
             shootSound.play();
             addShot = true;
-            shotCounter = 10;
+            switch (strength){
+                case 0: shotCounter = 10; break;
+                case 1: shotCounter = 8; break;
+                default: shotCounter = 7; break;
+            }
         }
     }
 
     virtual void resetShoot(){
         addShot = false;
         shotCounter = 0;
+    }
+
+    virtual void increaseStrength(int amount){
+        strength += 1;
+        if (strength > 3){
+            strength = 3;
+        }
     }
 
     virtual void createBullet(Player & player, World & world);
@@ -782,7 +799,7 @@ public:
     void logic(World & world);
 
     void power(Player & player){
-        player.setShootingBehavior(Util::ReferenceCount<ShootingBehavior>(new TripleShot()));
+        player.getShootingBehavior()->increaseStrength(1);
     }
 
     void draw(const Graphics::Bitmap & work){
@@ -975,7 +992,7 @@ public:
             addExplosion(asteroid->getX(), asteroid->getY(), ExplosionLarge);
             removeAsteroid(asteroid);
             asteroid->createMore(*this);
-            if (asteroid->getSize() == Small && Util::rnd(20) == 0){
+            if (asteroid->getSize() == Small && Util::rnd(8) == 0){
                 makePowerup(asteroid->getX(), asteroid->getY());
             }
         }
@@ -1111,7 +1128,33 @@ void Powerup::logic(World & world){
 }
 
 void ShootingBehavior::createBullet(Player & player, World & world){
-    world.addBullet(player.getX(), player.getY(), player.getAngle(), Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+    switch (strength){
+        case 0: {
+            world.addBullet(player.getX(), player.getY(), player.getAngle(), Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            break;
+        }
+        case 1: {
+            double angle90 = Util::radians(player.getAngle() + 90);
+            double anglen90 = Util::radians(player.getAngle() - 90);
+            int distance = 5;
+            world.addBullet(player.getX() + cos(angle90) * distance, player.getY() - sin(angle90) * distance, player.getAngle(), Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            world.addBullet(player.getX() + cos(anglen90) * distance, player.getY() - sin(anglen90) * distance, player.getAngle(), Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            break;
+        }
+        case 2: {
+            world.addBullet(player.getX(), player.getY(), player.getAngle(), Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            world.addBullet(player.getX(), player.getY(), player.getAngle() + 10, Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            world.addBullet(player.getX(), player.getY(), player.getAngle() - 10, Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            break;
+        }
+        case 3: {
+            world.addBullet(player.getX(), player.getY(), player.getAngle() - 5, Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            world.addBullet(player.getX(), player.getY(), player.getAngle() + 5, Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            world.addBullet(player.getX(), player.getY(), player.getAngle() + 15, Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            world.addBullet(player.getX(), player.getY(), player.getAngle() - 15, Util::distance(0, 0, player.getVelocityX(), player.getVelocityY()) + 3);
+            break;
+        }
+    }
 }
 
 void TripleShot::createBullet(Player & player, World & world){
