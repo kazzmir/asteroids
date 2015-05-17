@@ -47,9 +47,9 @@ public:
         }
     }
     
-    void move(int angle, double velocityX, double velocityY){
-        x -= cos(Util::radians(angle)) * (velocity * velocityX);
-        y += sin(Util::radians(angle)) * (velocity * velocityY);
+    void move(double velocityX, double velocityY){
+        x += velocityX;
+        y += velocityY;
         if (x < 0){
             x = GFX_X + x;
         } else if (x > GFX_X){
@@ -107,11 +107,11 @@ public:
         }
     }
     
-    void logic(int angle, double velocityX, double velocityY) {
+    void logic(double velocityX, double velocityY) {
         for (std::vector<Util::ReferenceCount<Star> >::const_iterator i = stars.begin(); i != stars.end(); ++i){
             Util::ReferenceCount<Star> star = *i;
             star->logic();
-            star->move(angle, velocityX, velocityY);
+            star->move(velocityX, velocityY);
         }
     }
 
@@ -901,7 +901,7 @@ public:
     }
 
     void logic(){
-        stars.logic(player.getAngle(), player.getVelocityX(), player.getVelocityY());
+        stars.logic(-player.getVelocityX(), -player.getVelocityY());
         for (vector<Util::ReferenceCount<Asteroid> >::iterator it = asteroids.begin(); it != asteroids.end(); it++){
             Util::ReferenceCount<Asteroid> asteroid = *it;
             asteroid->logic();
