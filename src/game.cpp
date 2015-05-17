@@ -1,22 +1,40 @@
 #include "game.h"
-#include "r-tech1/graphics/bitmap.h"
-#include "r-tech1/debug.h"
-#include "r-tech1/font.h"
-#include "r-tech1/input/input-map.h"
-#include "r-tech1/input/input-source.h"
-#include "r-tech1/input/input-manager.h"
-#include "r-tech1/input/keyboard.h"
-#include "r-tech1/file-system.h"
-#include "r-tech1/sound/music.h"
-#include "r-tech1/sound/sound.h"
-#include "r-tech1/events.h"
-#include "r-tech1/init.h"
-#include "r-tech1/configuration.h"
+#include <r-tech1/graphics/bitmap.h>
+#include <r-tech1/debug.h>
+#include <r-tech1/font.h>
+#include <r-tech1/input/input-map.h>
+#include <r-tech1/input/input-source.h>
+#include <r-tech1/input/input-manager.h>
+#include <r-tech1/input/keyboard.h>
+#include <r-tech1/file-system.h>
+#include <r-tech1/sound/music.h>
+#include <r-tech1/sound/sound.h>
+#include <r-tech1/events.h>
+#include <r-tech1/init.h>
+#include <r-tech1/configuration.h>
 #include <math.h>
 #include <vector>
 #include <algorithm>
 
 using std::vector;
+
+Filesystem::AbsolutePath Filesystem::configFile(){
+    std::ostringstream str;
+    /* what if HOME isn't set? */
+    str << getenv("HOME") << "/.asteroidsrc";
+    return Filesystem::AbsolutePath(str.str());
+}
+
+Filesystem::AbsolutePath Filesystem::userDirectory(){
+    std::ostringstream str;
+    char * home = getenv("HOME");
+    if (home == NULL){
+        str << "/tmp/asteroids";
+    } else {
+        str << home << "/.asteroids/";
+    }
+    return Filesystem::AbsolutePath(str.str());
+}
 
 namespace Asteroids{
 

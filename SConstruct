@@ -1,5 +1,9 @@
 import os
 
+import scons.utils
+
+SetOption('num_jobs', scons.utils.detectCPUs())
+
 VariantDir('build', 'src', duplicate=0)
 
 includedirs = '{0}/src'.format(os.getcwd())
