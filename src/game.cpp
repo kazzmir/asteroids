@@ -66,8 +66,8 @@ public:
     }
     
     void move(double velocityX, double velocityY){
-        x += velocityX;
-        y += velocityY;
+        x += velocityX * velocity;
+        y += velocityY * velocity;
         if (x < 0){
             x = GFX_X + x;
         } else if (x > GFX_X){
